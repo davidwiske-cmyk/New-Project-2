@@ -27,10 +27,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "humanImage and garmentImage are required." }, { status: 400 });
   }
 
-  // Category-specific parameter tuning
-  const isFullOutfit = category === "one-pieces";
-  const isTops = category === "tops";
-
   // Start prediction
   const runRes = await fetch(`${FASHN_API}/run`, {
     method: "POST",
@@ -45,10 +41,8 @@ export async function POST(req: NextRequest) {
         garment_image: garmentImage,
         category,
         mode: "quality",
-        segmentation_free: true,        // handles mirror selfies and complex backgrounds
-        garment_photo_type: "auto",     // handles flat-lay, model, ghost mannequin
-        cover_feet: isFullOutfit,       // show full body for outfits
-        long_top: isTops ? false : undefined, // cleaner fit for regular tops
+        segmentation_free: true,
+        garment_photo_type: "auto",
         num_samples: 1,
         output_format: "png",
         return_base64: false,
