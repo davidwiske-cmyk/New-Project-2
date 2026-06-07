@@ -348,7 +348,7 @@ document.getElementById("downloadBtn").addEventListener("click", () => {
   const url = document.getElementById("resultOutput").src;
   const a = document.createElement("a");
   a.href = url;
-  a.download = `tryon-${Date.now()}.jpg`;
+  a.download = `fitcheck-${Date.now()}.png`;
   a.click();
 });
 
@@ -382,7 +382,7 @@ function renderHistory() {
   chrome.storage.local.get(["history"], (data) => {
     const history = data.history || [];
     if (history.length === 0) {
-      historyList.innerHTML = '<p class="empty-state">No try-ons yet. Start by uploading a photo!</p>';
+      historyList.innerHTML = '<p class="empty-state">No fitchecks yet. Start by uploading a photo!</p>';
       return;
     }
 
@@ -457,7 +457,7 @@ function updateTryOnBtn() {
 function setLoading(on) {
   tryOnBtn.disabled = on;
   tryOnBtn.classList.toggle("loading", on);
-  tryOnBtn.textContent = on ? "Processing..." : "Try it on";
+  tryOnBtn.textContent = on ? "Processing..." : "Fitcheck";
 }
 
 function setStatus(type, msg) {

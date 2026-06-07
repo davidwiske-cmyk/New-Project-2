@@ -73,14 +73,14 @@ function onImgClick(e) {
       chrome.storage.local.set({
         pendingProductImage: { imageUrl: base64, label, originalWidth, originalHeight },
       });
-      showToast("✓ Product selected! Open the extension to try it on.");
+      showToast("✓ Product selected! Open Fitcheck to continue.");
     })
     .catch(() => {
       // Fall back to URL if fetch fails
       chrome.storage.local.set({
         pendingProductImage: { imageUrl, label, originalWidth, originalHeight },
       });
-      showToast("✓ Product selected! Open the extension to try it on.");
+      showToast("✓ Product selected! Open Fitcheck to continue.");
     });
 }
 
