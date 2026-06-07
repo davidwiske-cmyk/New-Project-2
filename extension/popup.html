@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual Try-On</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Virtual Try-On</h1>
+
+    <section class="section">
+      <label class="label">Your photo</label>
+      <div class="photo-area" id="photoArea">
+        <img id="photoPreview" class="hidden" alt="Your photo" />
+        <span id="photoPlaceholder">Click to upload</span>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" class="hidden" />
+    </section>
+
+    <section class="section">
+      <label class="label">Backend URL</label>
+      <input type="text" id="backendUrl" placeholder="https://your-app.vercel.app" class="input" />
+      <p class="hint">Your deployed Vercel backend URL</p>
+    </section>
+
+    <button id="tryOnBtn" class="btn" disabled>Try it on</button>
+    <div id="status" class="status hidden"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
