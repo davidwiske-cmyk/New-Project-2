@@ -1,85 +1,99 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const REPLICATE_API = "https://api.replicate.com/v1/predictions";
-// IDM-VTON model version
-const MODEL_VERSION = "906425dbca90663ff5427624839572cc56ea7d380343d13e2a4c4b09d3f0c30f";
+const FASHN_API = "https://api.fashn.ai/v1";
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.REPLICATE_API_KEY;
+  const apiKey = process.env.FASHN_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "REPLICATE_API_KEY not set" }, { status: 500 });
+    return NextResponse.json({ error: "FASHN_API_KEY not set on the server." }, { status: 500 });
   }
 
-  let body: { humanImage: string; garmentImage: string; garmentDescription?: string };
+  let body: {
+    humanImage: string;
+    garmentImage: string;
+    category?: string;
+    garmentDescription?: string;
+  };
+
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { humanImage, garmentImage, garmentDescription = "" } = body;
+  const { humanImage, garmentImage, category = "auto" } = body;
+
   if (!humanImage || !garmentImage) {
-    return NextResponse.json({ error: "humanImage and garmentImage are required" }, { status: 400 });
+    return NextResponse.json({ error: "humanImage and garmentImage are required." }, { status: 400 });
   }
+
+  // Category-specific parameter tuning
+  const isFullOutfit = category === "one-pieces";
+  const isTops = category === "tops";
 
   // Start prediction
-  const createRes = await fetch(REPLICATE_API, {
+  const runRes = await fetch(`${FASHN_API}/run`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      Prefer: "wait=60",
     },
     body: JSON.stringify({
-      version: MODEL_VERSION,
-      input: {
-        human_img: humanImage,
-        garm_img: garmentImage,
-        garment_des: garmentDescription,
-        is_checked: true,
-        is_checked_crop: false,
-        denoise_steps: 30,
-        seed: 42,
+      model_name: "tryon-v1.6",
+      inputs: {
+        model_image: humanImage,
+        garment_image: garmentImage,
+        category,
+        mode: "quality",
+        segmentation_free: true,        // handles mirror selfies and complex backgrounds
+        garment_photo_type: "auto",     // handles flat-lay, model, ghost mannequin
+        cover_feet: isFullOutfit,       // show full body for outfits
+        long_top: isTops ? false : undefined, // cleaner fit for regular tops
+        num_samples: 1,
+        output_format: "png",
+        return_base64: false,
       },
     }),
   });
 
-  if (!createRes.ok) {
-    const err = await createRes.text();
-    return NextResponse.json({ error: `Replicate error: ${err}` }, { status: 502 });
+  if (!runRes.ok) {
+    const err = await runRes.text();
+    return NextResponse.json({ error: `Failed to start try-on: ${err}` }, { status: 502 });
   }
 
-  const prediction = await createRes.json();
-
-  // If Prefer: wait already resolved it
-  if (prediction.status === "succeeded") {
-    return NextResponse.json({ output: prediction.output });
+  const { id, error: runError } = await runRes.json();
+  if (runError || !id) {
+    return NextResponse.json({ error: runError || "No prediction ID returned." }, { status: 502 });
   }
 
-  // Otherwise poll
-  const predictionUrl = prediction.urls?.get;
-  if (!predictionUrl) {
-    return NextResponse.json({ error: "No polling URL returned" }, { status: 502 });
-  }
-
-  for (let i = 0; i < 60; i++) {
+  // Poll for result (max ~90s)
+  for (let i = 0; i < 45; i++) {
     await sleep(2000);
-    const pollRes = await fetch(predictionUrl, {
+
+    const statusRes = await fetch(`${FASHN_API}/status/${id}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
-    const poll = await pollRes.json();
 
-    if (poll.status === "succeeded") {
-      return NextResponse.json({ output: poll.output });
+    if (!statusRes.ok) continue;
+
+    const poll = await statusRes.json();
+
+    if (poll.status === "completed") {
+      const output = Array.isArray(poll.output) ? poll.output[0] : poll.output;
+      return NextResponse.json({ output });
     }
+
     if (poll.status === "failed" || poll.status === "canceled") {
-      return NextResponse.json({ error: `Prediction ${poll.status}: ${poll.error}` }, { status: 502 });
+      return NextResponse.json(
+        { error: `Try-on ${poll.status}: ${poll.error || "Unknown error"}` },
+        { status: 502 }
+      );
     }
   }
 
-  return NextResponse.json({ error: "Timed out waiting for prediction" }, { status: 504 });
+  return NextResponse.json({ error: "Timed out waiting for result. Try again." }, { status: 504 });
 }
 
 function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }
