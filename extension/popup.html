@@ -2,32 +2,175 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Virtual Try-On</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Virtual Try-On</h1>
 
-    <section class="section">
-      <label class="label">Your photo</label>
+<!-- ONBOARDING OVERLAY -->
+<div id="onboarding" class="onboarding hidden">
+  <div class="onboarding-card">
+    <div class="onboarding-step active" data-step="1">
+      <div class="onboarding-icon">👤</div>
+      <h2>Upload your photo</h2>
+      <p>Front-facing. Plain background. Arms at your sides. Full body visible. The better your photo, the better the result.</p>
+    </div>
+    <div class="onboarding-step" data-step="2">
+      <div class="onboarding-icon">👕</div>
+      <h2>Select a garment</h2>
+      <p>Navigate to any product on a shopping site. Click "Select on page" and click the item image you want to wear.</p>
+    </div>
+    <div class="onboarding-step" data-step="3">
+      <div class="onboarding-icon">⚡</div>
+      <h2>Try it on</h2>
+      <p>Hit the button. AI fuses your photo with the garment in ~30 seconds. Save what you love to your library.</p>
+    </div>
+    <div class="onboarding-dots">
+      <span class="dot active"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+    <button id="onboardingNext" class="btn-cta-onboarding">Next</button>
+  </div>
+</div>
+
+<!-- CROP SCREEN -->
+<div id="screen-crop" class="screen hidden">
+  <div class="screen-header">
+    <button class="back-btn" data-target="main">←</button>
+    <span>Crop Photo</span>
+  </div>
+  <p class="crop-hint">Drag to reposition · Scroll to zoom</p>
+  <div class="crop-container">
+    <div class="silhouette-overlay">
+      <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="100" cy="45" rx="28" ry="32" fill="none" stroke="white" stroke-width="2.5"/>
+        <path d="M60 100 Q100 80 140 100 L150 220 L50 220 Z" fill="none" stroke="white" stroke-width="2.5"/>
+        <line x1="50" y1="220" x2="40" y2="360" stroke="white" stroke-width="2.5"/>
+        <line x1="150" y1="220" x2="160" y2="360" stroke="white" stroke-width="2.5"/>
+        <line x1="60" y1="115" x2="20" y2="200" stroke="white" stroke-width="2.5"/>
+        <line x1="140" y1="115" x2="180" y2="200" stroke="white" stroke-width="2.5"/>
+      </svg>
+      <p class="silhouette-label">Align yourself here</p>
+    </div>
+    <canvas id="cropCanvas"></canvas>
+    <img id="cropImage" alt="Your photo" />
+  </div>
+  <div class="crop-controls">
+    <label>Zoom <input type="range" id="zoomSlider" min="1" max="3" step="0.05" value="1" /></label>
+  </div>
+  <div class="cta-footer">
+    <button id="cropConfirm" class="btn-cta">Use this photo</button>
+  </div>
+</div>
+
+<!-- MAIN SCREEN -->
+<div id="screen-main" class="screen">
+  <div class="hero">
+    <div class="hero-top">
+      <div class="hero-title">
+        <span>AI</span>
+        Try-On
+      </div>
+      <button id="historyBtn" class="icon-btn" title="My library">🗂</button>
+    </div>
+  </div>
+
+  <div class="screen-body">
+    <!-- Photo -->
+    <div class="section">
+      <div class="label">Your photo</div>
       <div class="photo-area" id="photoArea">
         <img id="photoPreview" class="hidden" alt="Your photo" />
-        <span id="photoPlaceholder">Click to upload</span>
+        <div id="photoPlaceholder" class="placeholder-content">
+          <div class="placeholder-icon">👤</div>
+          <span>Upload photo</span>
+          <span class="placeholder-hint">Front-facing · plain background</span>
+        </div>
       </div>
       <input type="file" id="photoInput" accept="image/*" class="hidden" />
-    </section>
+      <button id="editPhotoBtn" class="text-btn hidden">✂ Crop / Adjust</button>
+    </div>
 
-    <section class="section">
-      <label class="label">Backend URL</label>
+    <!-- Category -->
+    <div class="section">
+      <div class="label">Garment type</div>
+      <div class="category-picker">
+        <button class="cat-btn active" data-cat="auto">Auto</button>
+        <button class="cat-btn" data-cat="tops">Top</button>
+        <button class="cat-btn" data-cat="bottoms">Bottom</button>
+        <button class="cat-btn" data-cat="one-pieces">Full</button>
+      </div>
+    </div>
+
+    <!-- Product image -->
+    <div class="section">
+      <div class="label">Product</div>
+      <div class="product-area" id="productArea">
+        <img id="productPreview" class="hidden" alt="Product" />
+        <div id="productPlaceholder" class="placeholder-content">
+          <div class="placeholder-icon">🛍</div>
+          <span>No product selected</span>
+        </div>
+      </div>
+      <button id="selectImageBtn" class="text-btn">⊕ Select on page</button>
+    </div>
+
+    <!-- Backend URL -->
+    <div class="section">
+      <div class="label">Backend URL</div>
       <input type="text" id="backendUrl" placeholder="https://your-app.vercel.app" class="input" />
-      <p class="hint">Your deployed Vercel backend URL</p>
-    </section>
-
-    <button id="tryOnBtn" class="btn" disabled>Try it on</button>
-    <div id="status" class="status hidden"></div>
+    </div>
   </div>
-  <script src="popup.js"></script>
+
+  <div class="cta-footer">
+    <div id="progressArea" class="progress-area hidden">
+      <div class="progress-bar-track"><div id="progressBar" class="progress-bar"></div></div>
+      <div id="progressLabel" class="progress-label">Starting...</div>
+    </div>
+    <div id="status" class="status hidden"></div>
+    <button id="tryOnBtn" class="btn-cta" disabled>Try It On</button>
+  </div>
+</div>
+
+<!-- HISTORY SCREEN -->
+<div id="screen-history" class="screen hidden">
+  <div class="screen-header">
+    <button class="back-btn" data-target="main">←</button>
+    <span>My Library</span>
+  </div>
+  <div id="historyList" class="history-list">
+    <p class="empty-state">No try-ons saved yet</p>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="screen-result" class="screen hidden">
+  <div class="screen-header">
+    <button class="back-btn" data-target="main">←</button>
+    <span id="resultTitle">Result</span>
+  </div>
+  <div class="result-body">
+    <div class="comparison">
+      <div class="comparison-side">
+        <div class="comparison-label">Original</div>
+        <img id="resultOriginal" alt="Original" />
+      </div>
+      <div class="comparison-side">
+        <div class="comparison-label">You wearing it</div>
+        <img id="resultOutput" alt="Result" />
+      </div>
+    </div>
+    <div class="result-actions">
+      <button id="downloadBtn" class="btn">⬇ Save</button>
+      <button id="tryAgainBtn" class="btn">← Try Another</button>
+    </div>
+    <p id="resultLabel" class="result-label"></p>
+  </div>
+</div>
+
+<script src="popup.js"></script>
 </body>
 </html>
