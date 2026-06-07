@@ -264,20 +264,20 @@ tryOnBtn.addEventListener("click", async () => {
       finishProgress();
       currentOriginalImage = selectedImageUrl;
 
-      // Resize result to match original product image aspect ratio
+      // Save to history using the original URL (small) — not the resized base64
+      saveToHistory({
+        label: currentGarmentLabel,
+        garmentImage: selectedImageUrl,
+        resultImage: json.output,  // Fashn.ai URL, not base64
+        category: selectedCategory,
+      });
+
+      // Resize result for display only (not stored)
       const finalResult = await resizeToMatch(
         json.output,
         originalProductWidth,
         originalProductHeight
       );
-
-      // Save to history
-      saveToHistory({
-        label: currentGarmentLabel,
-        garmentImage: selectedImageUrl,
-        resultImage: finalResult,
-        category: selectedCategory,
-      });
 
       // Show result screen
       showResult(selectedImageUrl, finalResult, currentGarmentLabel);
@@ -348,7 +348,7 @@ document.getElementById("downloadBtn").addEventListener("click", () => {
   const url = document.getElementById("resultOutput").src;
   const a = document.createElement("a");
   a.href = url;
-  a.download = `tryon-${Date.now()}.jpg`;
+  a.download = `fitcheck-${Date.now()}.png`;
   a.click();
 });
 
@@ -367,14 +367,19 @@ function saveToHistory(item) {
     const history = data.history || [];
     history.unshift({
       id: Date.now(),
-      label: item.label || "Try-on",
-      garmentImage: item.garmentImage,
+      label: item.label || "Fitcheck",
+      // Only store URLs, never base64 — keeps storage small
+      garmentImage: item.garmentImage.startsWith("data:") ? null : item.garmentImage,
       resultImage: item.resultImage,
       category: item.category,
       date: new Date().toLocaleDateString(),
     });
     // Keep last 20
-    chrome.storage.local.set({ history: history.slice(0, 20) });
+    chrome.storage.local.set({ history: history.slice(0, 20) }, (err) => {
+      if (chrome.runtime.lastError) {
+        console.warn("Fitcheck: history save failed —", chrome.runtime.lastError.message);
+      }
+    });
   });
 }
 
@@ -382,7 +387,7 @@ function renderHistory() {
   chrome.storage.local.get(["history"], (data) => {
     const history = data.history || [];
     if (history.length === 0) {
-      historyList.innerHTML = '<p class="empty-state">No try-ons yet. Start by uploading a photo!</p>';
+      historyList.innerHTML = '<p class="empty-state">No fitchecks yet. Start by uploading a photo!</p>';
       return;
     }
 
@@ -457,7 +462,7 @@ function updateTryOnBtn() {
 function setLoading(on) {
   tryOnBtn.disabled = on;
   tryOnBtn.classList.toggle("loading", on);
-  tryOnBtn.textContent = on ? "Processing..." : "Try it on";
+  tryOnBtn.textContent = on ? "Processing..." : "Fitcheck";
 }
 
 function setStatus(type, msg) {

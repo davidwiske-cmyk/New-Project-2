@@ -35,15 +35,13 @@ export async function POST(req: NextRequest) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model_name: "tryon-v1.6",
+      model_name: "tryon-max",
       inputs: {
         model_image: humanImage,
         garment_image: garmentImage,
         category,
-        mode: "quality",
         segmentation_free: true,
         garment_photo_type: "auto",
-        num_samples: 1,
         output_format: "png",
         return_base64: false,
       },
