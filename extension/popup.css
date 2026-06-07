@@ -91,6 +91,19 @@ body {
   margin-bottom: 4px;
 }
 
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
 .icon-btn {
   background: #111;
   border: 1px solid #222;
